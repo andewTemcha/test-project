@@ -7,6 +7,7 @@ using PDR.PatientBooking.Data.Models;
 using PDR.PatientBooking.Service.DoctorServices.Requests;
 using PDR.PatientBooking.Service.DoctorServices.Validation;
 using System;
+using PDR.PatientBooking.Service.Constants;
 
 namespace PDR.PatientBooking.Service.Tests.DoctorServices.Validation
 {
@@ -103,14 +104,12 @@ namespace PDR.PatientBooking.Service.Tests.DoctorServices.Validation
 
             //assert
             res.PassedValidation.Should().BeFalse();
-            res.Errors.Should().Contain("Email must be populated");
+            res.Errors.Should().Contain(ValidationErrorMessages.ShouldBePopulated(nameof(request.Email)));
         }
 
         [TestCase("user@")]
         [TestCase("@")]
         [TestCase("user")]
-        [TestCase(null)]
-        [TestCase("")]
         public void ValidateRequest_InvalidEmail_ReturnsFailedValidationResult(string email)
         {
             //arrange
@@ -118,11 +117,11 @@ namespace PDR.PatientBooking.Service.Tests.DoctorServices.Validation
             request.Email = email;
 
             //act
-            var res = _addDoctorRequestValidator.ValidateRequest(request);
+            var sut = _addDoctorRequestValidator.ValidateRequest(request);
 
             //assert
-            res.PassedValidation.Should().BeFalse();
-            res.Errors.Should().Contain("Email must be a valid email address");
+            sut.PassedValidation.Should().BeFalse();
+            sut.Errors.Should().BeEquivalentTo(ValidationErrorMessages.ProvideValidEmail);
         }
 
         [TestCase("user@domain.com")]

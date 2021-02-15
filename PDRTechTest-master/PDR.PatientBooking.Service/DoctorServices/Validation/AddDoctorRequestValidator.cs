@@ -3,6 +3,8 @@ using PDR.PatientBooking.Service.DoctorServices.Requests;
 using PDR.PatientBooking.Service.Validation;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
+using PDR.PatientBooking.Service.Constants;
 
 namespace PDR.PatientBooking.Service.DoctorServices.Validation
 {
@@ -19,7 +21,7 @@ namespace PDR.PatientBooking.Service.DoctorServices.Validation
         {
             var result = new PdrValidationResult(true);
 
-            if (MissingRequiredFields(request, ref result))
+            if (ValidateGeneralFields(request, ref result))
                 return result;
 
             if (DoctorAlreadyInDb(request, ref result))
@@ -28,18 +30,24 @@ namespace PDR.PatientBooking.Service.DoctorServices.Validation
             return result;
         }
 
-        public bool MissingRequiredFields(AddDoctorRequest request, ref PdrValidationResult result)
+        private bool ValidateGeneralFields(AddDoctorRequest request, ref PdrValidationResult result)
         {
             var errors = new List<string>();
 
             if (string.IsNullOrEmpty(request.FirstName))
-                errors.Add("FirstName must be populated");
+                errors.Add(ValidationErrorMessages.ShouldBePopulated(nameof(request.FirstName)));
 
             if (string.IsNullOrEmpty(request.LastName))
-                errors.Add("LastName must be populated");
+                errors.Add(ValidationErrorMessages.ShouldBePopulated(nameof(request.LastName)));
 
             if (string.IsNullOrEmpty(request.Email))
-                errors.Add("Email must be populated");
+            {
+                errors.Add(ValidationErrorMessages.ShouldBePopulated(nameof(request.Email)));
+            }
+            else if (!Regex.IsMatch(request.Email, RegexValidation.EmailValidationRegexpPattern))
+            {
+                errors.Add(ValidationErrorMessages.ProvideValidEmail);
+            }
 
             if (errors.Any())
             {
@@ -56,7 +64,7 @@ namespace PDR.PatientBooking.Service.DoctorServices.Validation
             if (_context.Doctor.Any(x => x.Email == request.Email))
             {
                 result.PassedValidation = false;
-                result.Errors.Add("A doctor with that email address already exists");
+                result.Errors.Add(ValidationErrorMessages.DoctorAlreadyInDb);
                 return true;
             }
 
