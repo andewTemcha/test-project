@@ -36,7 +36,6 @@ namespace PDR.PatientBooking.Service.BookingService
 
             var patient = await _context
                     .Patient
-                    .Include(p=>p.Clinic)
                     .FirstOrDefaultAsync(p => p.Id == request.PatientId, cancellationToken);
 
             _context.Order.Add(new Order

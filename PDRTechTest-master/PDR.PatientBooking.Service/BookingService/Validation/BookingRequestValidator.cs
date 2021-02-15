@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
+using PDR.PatientBooking.Data.Models;
 
 namespace PDR.PatientBooking.Service.BookingService.Validation
 {
@@ -23,6 +24,9 @@ namespace PDR.PatientBooking.Service.BookingService.Validation
             var result = new PdrValidationResult(true);
 
             if (MissingRequiredFields(request, ref result))
+                return result;
+            
+            if (ValidateRelatedEntities(request, ref result))
                 return result;
 
             if (ValidateBookingDateTimeAvailability(request, ref result))
@@ -57,6 +61,31 @@ namespace PDR.PatientBooking.Service.BookingService.Validation
             return false;
         }
 
+        private bool ValidateRelatedEntities(AddBookingRequest request, ref PdrValidationResult result)
+        {
+            var patient = _context.Patient.FirstOrDefault(p => p.Id == request.PatientId);
+
+            if (patient == null)
+            {
+                result.Errors.Add(ValidationErrorMessages.EntityMustExistInDb(nameof(Patient), request.PatientId.ToString()));
+            }
+
+            var doctor = _context.Doctor.FirstOrDefault(p => p.Id == request.DoctorId);
+
+            if (doctor == null)
+            {
+                result.Errors.Add(ValidationErrorMessages.EntityMustExistInDb(nameof(Doctor), request.DoctorId.ToString()));
+            }
+
+            if (result.Errors.Any())
+            {
+                result.PassedValidation = false;
+                return true;
+            }
+
+            return false;
+        }
+
         private bool ValidateBookingDateTimeAvailability(AddBookingRequest request, ref PdrValidationResult result)
         {
             var now = DateTime.UtcNow;
@@ -81,13 +110,24 @@ namespace PDR.PatientBooking.Service.BookingService.Validation
                 return true;
             }
 
-            var bookings = _context.Order.Where(o => !o.IsCancelled &&
-                                                     o.DoctorId == request.DoctorId &&
-                                                     request.StartTime < o.EndTime && o.StartTime < request.EndTime).ToList();
-            if (bookings.Any())
+            var patientOverlappingAppointments = _context.Order.Where(o => !o.IsCancelled &&
+                                                                        o.PatientId == request.PatientId &&
+                                                                        request.StartTime < o.EndTime && o.StartTime < request.EndTime).ToList();
+
+            if (patientOverlappingAppointments.Any())
             {
                 result.PassedValidation = false;
-                result.Errors.Add(ValidationErrorMessages.DoctorIsAlreadyBooked);
+                result.Errors.Add(ValidationErrorMessages.IsAlreadyBooked(nameof(Patient)));
+                return true;
+            }
+
+            var doctorOverLappingAppointments = _context.Order.Where(o => !o.IsCancelled &&
+                                                     o.DoctorId == request.DoctorId &&
+                                                     request.StartTime < o.EndTime && o.StartTime < request.EndTime).ToList();
+            if (doctorOverLappingAppointments.Any())
+            {
+                result.PassedValidation = false;
+                result.Errors.Add(ValidationErrorMessages.IsAlreadyBooked(nameof(Doctor)));
                 return true;
             }
 
