@@ -4,6 +4,13 @@ using PDR.PatientBooking.Data.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using PDR.PatientBooking.Service.BookingService;
+using PDR.PatientBooking.Service.BookingService.Requests;
+using PDR.PatientBooking.Service.BookingService.Validation;
 
 namespace PDR.PatientBookingApi.Controllers
 {
@@ -11,71 +18,76 @@ namespace PDR.PatientBookingApi.Controllers
     [ApiController]
     public class BookingController : ControllerBase
     {
-        private readonly PatientBookingContext _context;
 
-        public BookingController(PatientBookingContext context)
+        private readonly IBookingService _bookingService;
+
+        public BookingController(IBookingService bookingService)
         {
-            _context = context;
+            _bookingService = bookingService;
         }
 
         [HttpGet("patient/{identificationNumber}/next")]
-        public IActionResult GetPatientNextAppointnemtn(long identificationNumber)
+        public async Task<IActionResult> GetPatientNextAppointment(long patientId, CancellationToken token)
         {
-            var bockings = _context.Order.OrderBy(x => x.StartTime).ToList();
+            var bookings = (await _bookingService.GetBookings(new AllBookingsRequest
+            {
+                PatientIdentificationNumber = patientId,
+                ExcludeCancelled = true,
+                ExcludePastDue = true
+            }, token)).ToArray();
 
-            if (bockings.Where(x => x.Patient.Id == identificationNumber).Count() == 0)
+            if (!bookings.Any())
             {
-                return StatusCode(502);
+                return NotFound($"No Upcoming Appointments were found for patient ID: {patientId}");
             }
-            else
+
+            var nextBooking = bookings.OrderBy(x => x.StartTime).First();
+
+            return Ok(new
             {
-                var bookings2 = bockings.Where(x => x.PatientId == identificationNumber);
-                if (bookings2.Where(x => x.StartTime > DateTime.Now).Count() == 0)
-                {
-                    return StatusCode(502);
-                }
-                else
-                {
-                    var bookings3 = bookings2.Where(x => x.StartTime > DateTime.Now);
-                    return Ok(new
-                    {
-                        bookings3.First().Id,
-                        bookings3.First().DoctorId,
-                        bookings3.First().StartTime,
-                        bookings3.First().EndTime
-                    });
-                }
-            }
+                nextBooking.Id,
+                nextBooking.DoctorId,
+                nextBooking.StartTime,
+                nextBooking.EndTime
+            });
         }
 
-        [HttpPost()]
-        public IActionResult AddBooking(NewBooking newBooking)
+        [HttpGet("{id:guid}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<Order> GetBooking(Guid id, CancellationToken token)
+        {
+            var bookingDetails = await _bookingService.GetBookingById(id, token);
+
+            return bookingDetails;
+        }
+
+        [HttpPost("")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        public async Task<IActionResult> AddBooking(NewBooking newBooking, CancellationToken token)
         {
             var bookingId = new Guid();
-            var bookingStartTime = newBooking.StartTime;
-            var bookingEndTime = newBooking.EndTime;
-            var bookingPatientId = newBooking.PatientId;
-            var bookingPatient = _context.Patient.FirstOrDefault(x => x.Id == newBooking.PatientId);
-            var bookingDoctorId = newBooking.DoctorId;
-            var bookingDoctor = _context.Doctor.FirstOrDefault(x => x.Id == newBooking.DoctorId);
-            var bookingSurgeryType = _context.Patient.FirstOrDefault(x => x.Id == bookingPatientId).Clinic.SurgeryType;
 
-            var myBooking = new Order
+            var bookingAddRequest = new AddBookingRequest()
             {
                 Id = bookingId,
-                StartTime = bookingStartTime,
-                EndTime = bookingEndTime,
-                PatientId = bookingPatientId,
-                DoctorId = bookingDoctorId,
-                Patient = bookingPatient,
-                Doctor = bookingDoctor,
-                SurgeryType = (int)bookingSurgeryType
+                StartTime = newBooking.StartTime,
+                EndTime = newBooking.EndTime,
+                PatientId = newBooking.PatientId,
+                DoctorId = newBooking.DoctorId
             };
 
-            _context.Order.AddRange(new List<Order> { myBooking });
-            _context.SaveChanges();
+            await _bookingService.AddBooking(bookingAddRequest, token);
 
-            return StatusCode(200);
+            return CreatedAtAction(nameof(GetBooking), new {id = bookingId});
+        }
+
+
+        [HttpPost("{bookingId:guid}/cancel")]
+        public async Task<IActionResult> CancelBooking(Guid bookingId, CancellationToken token)
+        {
+            await _bookingService.CancelBooking(bookingId, token);
+
+            return Ok();
         }
 
         public class NewBooking
@@ -87,28 +99,28 @@ namespace PDR.PatientBookingApi.Controllers
             public long DoctorId { get; set; }
         }
 
-        private static MyOrderResult UpdateLatestBooking(List<Order> bookings2, int i)
-        {
-            MyOrderResult latestBooking;
-            latestBooking = new MyOrderResult();
-            latestBooking.Id = bookings2[i].Id;
-            latestBooking.DoctorId = bookings2[i].DoctorId;
-            latestBooking.StartTime = bookings2[i].StartTime;
-            latestBooking.EndTime = bookings2[i].EndTime;
-            latestBooking.PatientId = bookings2[i].PatientId;
-            latestBooking.SurgeryType = (int)bookings2[i].GetSurgeryType();
+        //private static MyOrderResult UpdateLatestBooking(List<Order> bookings2, int i)
+        //{
+        //    MyOrderResult latestBooking;
+        //    latestBooking = new MyOrderResult();
+        //    latestBooking.Id = bookings2[i].Id;
+        //    latestBooking.DoctorId = bookings2[i].DoctorId;
+        //    latestBooking.StartTime = bookings2[i].StartTime;
+        //    latestBooking.EndTime = bookings2[i].EndTime;
+        //    latestBooking.PatientId = bookings2[i].PatientId;
+        //    latestBooking.SurgeryType = (int)bookings2[i].GetSurgeryType();
 
-            return latestBooking;
-        }
+        //    return latestBooking;
+        //}
 
-        private class MyOrderResult
-        {
-            public Guid Id { get; set; }
-            public DateTime StartTime { get; set; }
-            public DateTime EndTime { get; set; }
-            public long PatientId { get; set; }
-            public long DoctorId { get; set; }
-            public int SurgeryType { get; set; }
-        }
+        //private class MyOrderResult
+        //{
+        //    public Guid Id { get; set; }
+        //    public DateTime StartTime { get; set; }
+        //    public DateTime EndTime { get; set; }
+        //    public long PatientId { get; set; }
+        //    public long DoctorId { get; set; }
+        //    public int SurgeryType { get; set; }
+        //}
     }
 }

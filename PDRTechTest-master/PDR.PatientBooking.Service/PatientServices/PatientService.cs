@@ -8,6 +8,7 @@ using PDR.PatientBooking.Service.PatientServices.Validation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using PDR.PatientBooking.Service.Validation;
 
 namespace PDR.PatientBooking.Service.PatientServices
 {
@@ -28,7 +29,7 @@ namespace PDR.PatientBooking.Service.PatientServices
 
             if (!validationResult.PassedValidation)
             {
-                throw new ArgumentException(validationResult.Errors.First());
+                throw new ArgumentException(validationResult.Errors.AsString());
             }
 
             _context.Patient.Add(new Patient

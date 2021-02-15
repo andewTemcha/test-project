@@ -8,6 +8,7 @@ using PDR.PatientBooking.Service.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using PDR.PatientBooking.Service.Validation;
 
 namespace PDR.PatientBooking.Service.DoctorServices
 {
@@ -28,7 +29,7 @@ namespace PDR.PatientBooking.Service.DoctorServices
 
             if (!validationResult.PassedValidation)
             {
-                throw new ArgumentException(validationResult.Errors.First());
+                throw new ArgumentException(validationResult.Errors.AsString());
             }
 
             _context.Doctor.Add(new Doctor
