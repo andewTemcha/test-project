@@ -8,7 +8,11 @@ using Microsoft.EntityFrameworkCore;
 using PDR.PatientBooking.Data;
 using PDR.PatientBooking.Data.Models;
 using PDR.PatientBooking.Service.BookingService.Requests;
+using PDR.PatientBooking.Service.BookingService.Responses;
 using PDR.PatientBooking.Service.BookingService.Validation;
+using PDR.PatientBooking.Service.DoctorServices.Responses;
+using PDR.PatientBooking.Service.Enums;
+using PDR.PatientBooking.Service.PatientServices.Responses;
 using PDR.PatientBooking.Service.Validation;
 
 namespace PDR.PatientBooking.Service.BookingService
@@ -17,9 +21,9 @@ namespace PDR.PatientBooking.Service.BookingService
     {
         private readonly PatientBookingContext _context;
 
-        private readonly IBookingRequestValidator _validator;
+        private readonly IAddBookingRequestValidator _validator;
 
-        public BookingService(PatientBookingContext context, IBookingRequestValidator validator)
+        public BookingService(PatientBookingContext context, IAddBookingRequestValidator validator)
         {
             _context = context;
             _validator = validator;
@@ -66,7 +70,7 @@ namespace PDR.PatientBooking.Service.BookingService
             
         }
 
-        public async Task<IEnumerable<Order>> GetBookings(AllBookingsRequest ordersRequest, CancellationToken cancellationToken)
+        public async Task<GetAllBookingsResponse> GetBookings(AllBookingsRequest ordersRequest, CancellationToken cancellationToken)
         {
             var query = _context.Order.AsQueryable();
 
@@ -85,14 +89,62 @@ namespace PDR.PatientBooking.Service.BookingService
                 query = query.Where(x => x.StartTime > DateTime.UtcNow);
             }
 
-            return await query.AsNoTracking().ToListAsync(cancellationToken);
+            var bookings = await query.AsNoTracking().Select(o => MapFrom(o)).ToListAsync(cancellationToken);
+
+            return new GetAllBookingsResponse()
+            {
+                Bookings = bookings
+            };
         }
 
-        public async Task<Order> GetBookingById(Guid id, CancellationToken cancellationToken)
+        public async Task<GetAllBookingsResponse.Order> GetBookingById(Guid id, CancellationToken cancellationToken)
         {
-            return await _context
+            var booking = await _context
                 .Order
                 .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
+
+            if (booking == null)
+            {
+                return null;
+            }
+
+            return MapFrom(booking);
+        }
+
+        //TODO add auto-mapper instead
+        private GetAllBookingsResponse.Order MapFrom(Order booking)
+        {
+            return new GetAllBookingsResponse.Order
+            {
+                StartTime = booking.StartTime,
+                EndTime = booking.EndTime,
+                IsCancelled = booking.IsCancelled,
+                Id = booking.Id,
+                SurgeryType = booking.Patient.Clinic.SurgeryType,
+                Patient = new GetAllPatientsResponse.Patient
+                {
+                    Id = booking.Patient.Id,
+                    FirstName = booking.Patient.FirstName,
+                    LastName = booking.Patient.LastName,
+                    Email = booking.Patient.Email,
+                    DateOfBirth = booking.Patient.DateOfBirth,
+                    Gender = (Gender)booking.Patient.Gender,
+                    Clinic = new GetAllPatientsResponse.Clinic
+                    {
+                        Id = booking.Patient.ClinicId,
+                        Name = booking.Patient.Clinic.Name
+                    }
+                },
+                Doctor = new GetAllDoctorsResponse.Doctor
+                {
+                    Id = booking.Doctor.Id,
+                    FirstName = booking.Doctor.FirstName,
+                    LastName = booking.Doctor.LastName,
+                    Email = booking.Doctor.Email,
+                    DateOfBirth = booking.Doctor.DateOfBirth,
+                    Gender = (Gender)booking.Doctor.Gender
+                }
+            };
         }
     }
 }

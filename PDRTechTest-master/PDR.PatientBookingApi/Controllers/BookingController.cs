@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using PDR.PatientBooking.Service.BookingService;
 using PDR.PatientBooking.Service.BookingService.Requests;
+using PDR.PatientBooking.Service.BookingService.Responses;
 using PDR.PatientBooking.Service.BookingService.Validation;
 
 namespace PDR.PatientBookingApi.Controllers
@@ -29,12 +30,14 @@ namespace PDR.PatientBookingApi.Controllers
         [HttpGet("patient/{patientId}/next")]
         public async Task<IActionResult> GetPatientNextAppointment(long patientId, CancellationToken token)
         {
-            var bookings = (await _bookingService.GetBookings(new AllBookingsRequest
+            var bookingsResponse = await _bookingService.GetBookings(new AllBookingsRequest
             {
                 PatientIdentificationNumber = patientId,
                 ExcludeCancelled = true,
                 ExcludePastDue = true
-            }, token)).ToArray();
+            }, token);
+
+            var bookings = bookingsResponse.Bookings.ToArray();
 
             if (!bookings.Any())
             {
@@ -43,10 +46,10 @@ namespace PDR.PatientBookingApi.Controllers
 
             var nextBooking = bookings.OrderBy(x => x.StartTime).First();
 
-            return Ok(new
+            return Ok(new 
             {
                 nextBooking.Id,
-                nextBooking.DoctorId,
+                nextBooking.Doctor,
                 nextBooking.StartTime,
                 nextBooking.EndTime
             });
@@ -54,7 +57,7 @@ namespace PDR.PatientBookingApi.Controllers
 
         [HttpGet("{id:guid}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<Order> GetBooking(Guid id, CancellationToken token)
+        public async Task<GetAllBookingsResponse.Order> GetBooking(Guid id, CancellationToken token)
         {
             var bookingDetails = await _bookingService.GetBookingById(id, token);
 

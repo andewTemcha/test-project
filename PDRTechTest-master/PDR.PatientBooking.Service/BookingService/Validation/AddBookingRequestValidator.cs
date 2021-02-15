@@ -10,11 +10,11 @@ using PDR.PatientBooking.Data.Models;
 
 namespace PDR.PatientBooking.Service.BookingService.Validation
 {
-    public class BookingRequestValidator : IBookingRequestValidator
+    public class AddBookingRequestValidator : IAddBookingRequestValidator
     {
         private readonly PatientBookingContext _context;
 
-        public BookingRequestValidator(PatientBookingContext context)
+        public AddBookingRequestValidator(PatientBookingContext context)
         {
             _context = context;
         }
