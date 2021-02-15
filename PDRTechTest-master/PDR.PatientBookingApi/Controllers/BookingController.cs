@@ -26,7 +26,7 @@ namespace PDR.PatientBookingApi.Controllers
             _bookingService = bookingService;
         }
 
-        [HttpGet("patient/{identificationNumber}/next")]
+        [HttpGet("patient/{patientId}/next")]
         public async Task<IActionResult> GetPatientNextAppointment(long patientId, CancellationToken token)
         {
             var bookings = (await _bookingService.GetBookings(new AllBookingsRequest
@@ -65,7 +65,7 @@ namespace PDR.PatientBookingApi.Controllers
         [ProducesResponseType(StatusCodes.Status201Created)]
         public async Task<IActionResult> AddBooking(NewBooking newBooking, CancellationToken token)
         {
-            var bookingId = new Guid();
+            var bookingId = Guid.NewGuid();
 
             var bookingAddRequest = new AddBookingRequest()
             {
@@ -78,7 +78,7 @@ namespace PDR.PatientBookingApi.Controllers
 
             await _bookingService.AddBooking(bookingAddRequest, token);
 
-            return CreatedAtAction(nameof(GetBooking), new {id = bookingId});
+            return CreatedAtAction(nameof(GetBooking),  new {id = bookingId}, bookingAddRequest);
         }
 
 
@@ -92,35 +92,10 @@ namespace PDR.PatientBookingApi.Controllers
 
         public class NewBooking
         {
-            public Guid Id { get; set; }
             public DateTime StartTime { get; set; }
             public DateTime EndTime { get; set; }
             public long PatientId { get; set; }
             public long DoctorId { get; set; }
         }
-
-        //private static MyOrderResult UpdateLatestBooking(List<Order> bookings2, int i)
-        //{
-        //    MyOrderResult latestBooking;
-        //    latestBooking = new MyOrderResult();
-        //    latestBooking.Id = bookings2[i].Id;
-        //    latestBooking.DoctorId = bookings2[i].DoctorId;
-        //    latestBooking.StartTime = bookings2[i].StartTime;
-        //    latestBooking.EndTime = bookings2[i].EndTime;
-        //    latestBooking.PatientId = bookings2[i].PatientId;
-        //    latestBooking.SurgeryType = (int)bookings2[i].GetSurgeryType();
-
-        //    return latestBooking;
-        //}
-
-        //private class MyOrderResult
-        //{
-        //    public Guid Id { get; set; }
-        //    public DateTime StartTime { get; set; }
-        //    public DateTime EndTime { get; set; }
-        //    public long PatientId { get; set; }
-        //    public long DoctorId { get; set; }
-        //    public int SurgeryType { get; set; }
-        //}
     }
 }

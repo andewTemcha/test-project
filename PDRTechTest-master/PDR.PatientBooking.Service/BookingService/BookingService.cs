@@ -34,7 +34,6 @@ namespace PDR.PatientBooking.Service.BookingService
                 throw new ArgumentException(validationResult.Errors.AsString());
             }
 
-            var doctor = await _context.Doctor.FirstOrDefaultAsync(d => d.Id == request.DoctorId, cancellationToken);
             var patient = await _context
                     .Patient
                     .Include(p=>p.Clinic)
@@ -43,9 +42,7 @@ namespace PDR.PatientBooking.Service.BookingService
             _context.Order.Add(new Order
             {
                 Id = request.Id,
-                Doctor = doctor,
                 DoctorId = request.DoctorId,
-                Patient = patient,
                 PatientId = request.PatientId,
                 StartTime = request.StartTime,
                 EndTime = request.EndTime,
@@ -89,12 +86,14 @@ namespace PDR.PatientBooking.Service.BookingService
                 query = query.Where(x => x.StartTime > DateTime.UtcNow);
             }
 
-            return await query.ToListAsync(cancellationToken);
+            return await query.AsNoTracking().ToListAsync(cancellationToken);
         }
 
         public async Task<Order> GetBookingById(Guid id, CancellationToken cancellationToken)
         {
-            return await _context.Order.FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
+            return await _context
+                .Order
+                .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
         }
     }
 }
