@@ -4,6 +4,7 @@ using PDR.PatientBooking.Service.Validation;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using PDR.PatientBooking.Data.Models;
 using PDR.PatientBooking.Service.Constants;
 
 namespace PDR.PatientBooking.Service.DoctorServices.Validation
@@ -64,7 +65,7 @@ namespace PDR.PatientBooking.Service.DoctorServices.Validation
             if (_context.Doctor.Any(x => x.Email == request.Email))
             {
                 result.PassedValidation = false;
-                result.Errors.Add(ValidationErrorMessages.DoctorAlreadyInDb);
+                result.Errors.Add(ValidationErrorMessages.EntityWithEmailAlreadyExists(nameof(Doctor)));
                 return true;
             }
 

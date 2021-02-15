@@ -3,6 +3,9 @@ using PDR.PatientBooking.Service.PatientServices.Requests;
 using PDR.PatientBooking.Service.Validation;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
+using PDR.PatientBooking.Data.Models;
+using PDR.PatientBooking.Service.Constants;
 
 namespace PDR.PatientBooking.Service.PatientServices.Validation
 {
@@ -36,13 +39,19 @@ namespace PDR.PatientBooking.Service.PatientServices.Validation
             var errors = new List<string>();
 
             if (string.IsNullOrEmpty(request.FirstName))
-                errors.Add("FirstName must be populated");
+                errors.Add(ValidationErrorMessages.ShouldBePopulated(nameof(request.FirstName)));
 
             if (string.IsNullOrEmpty(request.LastName))
-                errors.Add("LastName must be populated");
+                errors.Add(ValidationErrorMessages.ShouldBePopulated(nameof(request.LastName)));
 
             if (string.IsNullOrEmpty(request.Email))
-                errors.Add("Email must be populated");
+            {
+                errors.Add(ValidationErrorMessages.ShouldBePopulated(nameof(request.Email)));
+            }
+            else if (!Regex.IsMatch(request.Email, RegexValidation.EmailValidationRegexpPattern))
+            {
+                errors.Add(ValidationErrorMessages.ProvideValidEmail);
+            }
 
             if (errors.Any())
             {
@@ -54,12 +63,13 @@ namespace PDR.PatientBooking.Service.PatientServices.Validation
             return false;
         }
 
+        //TODO remove ref parameters?
         private bool PatientAlreadyInDb(AddPatientRequest request, ref PdrValidationResult result)
         {
             if (_context.Patient.Any(x => x.Email == request.Email))
             {
                 result.PassedValidation = false;
-                result.Errors.Add("A patient with that email address already exists");
+                result.Errors.Add(ValidationErrorMessages.EntityWithEmailAlreadyExists(nameof(Patient)));
                 return true;
             }
 
@@ -71,7 +81,7 @@ namespace PDR.PatientBooking.Service.PatientServices.Validation
             if (!_context.Clinic.Any(x => x.Id == request.ClinicId))
             {
                 result.PassedValidation = false;
-                result.Errors.Add("A clinic with that ID could not be found");
+                result.Errors.Add(ValidationErrorMessages.ClinicWithThatIdNotExists);
                 return true;
             }
 

@@ -105,9 +105,8 @@ namespace PDR.PatientBooking.Service.Tests.DoctorServices
 
             //act
             _doctorService.AddDoctor(request);
-
             //assert
-            _context.Doctor.Should().ContainEquivalentOf(expected, options => options.Excluding(doctor => doctor.Id));
+            _context.Doctor.Should().ContainEquivalentOf(expected, options => options.Excluding(doctor => doctor.Id).Excluding(doctor => doctor.Created));
         }
 
         [Test]

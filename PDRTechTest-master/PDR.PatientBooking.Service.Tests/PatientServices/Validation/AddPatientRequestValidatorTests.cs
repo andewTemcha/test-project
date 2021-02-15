@@ -7,6 +7,7 @@ using PDR.PatientBooking.Data.Models;
 using PDR.PatientBooking.Service.PatientServices.Requests;
 using PDR.PatientBooking.Service.PatientServices.Validation;
 using System;
+using PDR.PatientBooking.Service.Constants;
 
 namespace PDR.PatientBooking.Service.Tests.PatientServices.Validation
 {
@@ -103,14 +104,12 @@ namespace PDR.PatientBooking.Service.Tests.PatientServices.Validation
 
             //assert
             res.PassedValidation.Should().BeFalse();
-            res.Errors.Should().Contain("Email must be populated");
+            res.Errors.Should().BeEquivalentTo(ValidationErrorMessages.ShouldBePopulated(nameof(request.Email)));
         }
 
         [TestCase("user@")]
         [TestCase("@")]
         [TestCase("user")]
-        [TestCase(null)]
-        [TestCase("")]
         public void ValidateRequest_InvalidEmail_ReturnsFailedValidationResult(string email)
         {
             //arrange
@@ -122,7 +121,7 @@ namespace PDR.PatientBooking.Service.Tests.PatientServices.Validation
 
             //assert
             res.PassedValidation.Should().BeFalse();
-            res.Errors.Should().Contain("Email must be a valid email address");
+            res.Errors.Should().BeEquivalentTo(ValidationErrorMessages.ProvideValidEmail);
         }
 
         [TestCase("user@domain.com")]
@@ -172,7 +171,7 @@ namespace PDR.PatientBooking.Service.Tests.PatientServices.Validation
 
             //assert
             res.PassedValidation.Should().BeFalse();
-            res.Errors.Should().Contain("A patient with that email address already exists");
+            res.Errors.Should().Contain(ValidationErrorMessages.EntityWithEmailAlreadyExists(nameof(Patient)));
         }
 
         [Test]
@@ -183,11 +182,11 @@ namespace PDR.PatientBooking.Service.Tests.PatientServices.Validation
             request.ClinicId++; //offset clinicId
 
             //act
-            var res = _addPatientRequestValidator.ValidateRequest(_fixture.Create<AddPatientRequest>());
+            var res = _addPatientRequestValidator.ValidateRequest(request);
 
             //assert
             res.PassedValidation.Should().BeFalse();
-            res.Errors.Should().Contain("A clinic with that ID could not be found");
+            res.Errors.Should().BeEquivalentTo(ValidationErrorMessages.ClinicWithThatIdNotExists);
         }
 
         private AddPatientRequest GetValidRequest()

@@ -171,7 +171,7 @@ namespace PDR.PatientBooking.Service.Tests.DoctorServices.Validation
 
             //assert
             res.PassedValidation.Should().BeFalse();
-            res.Errors.Should().Contain("A doctor with that email address already exists");
+            res.Errors.Should().Contain(ValidationErrorMessages.EntityWithEmailAlreadyExists(nameof(Doctor)));
         }
 
         private AddDoctorRequest GetValidRequest()

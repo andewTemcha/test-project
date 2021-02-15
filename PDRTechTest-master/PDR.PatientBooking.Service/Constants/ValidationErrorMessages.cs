@@ -8,9 +8,11 @@ namespace PDR.PatientBooking.Service.Constants
     {
         public static string ShouldBePopulated(string property) => $"{property} must be populated";
 
-        public const string DoctorAlreadyInDb = "A doctor with that email address already exists";
+        public static string EntityWithEmailAlreadyExists(string entity) => $"A {entity} with that email address already exists";
 
         public const string ProvideValidEmail = "Please provide a valid email address";
+
+        public const string ClinicWithThatIdNotExists = "A clinic with that ID could not be found";
 
     }
 }
