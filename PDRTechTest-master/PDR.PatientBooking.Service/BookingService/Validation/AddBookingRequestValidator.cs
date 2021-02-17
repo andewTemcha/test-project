@@ -5,7 +5,7 @@ using PDR.PatientBooking.Service.Validation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Internal;
 using PDR.PatientBooking.Data.Models;
 
 namespace PDR.PatientBooking.Service.BookingService.Validation
@@ -13,10 +13,12 @@ namespace PDR.PatientBooking.Service.BookingService.Validation
     public class AddBookingRequestValidator : IAddBookingRequestValidator
     {
         private readonly PatientBookingContext _context;
+        private readonly ISystemClock _systemClock;
 
-        public AddBookingRequestValidator(PatientBookingContext context)
+        public AddBookingRequestValidator(PatientBookingContext context, ISystemClock systemClock)
         {
             _context = context;
+            _systemClock = systemClock;
         }
 
         public PdrValidationResult ValidateRequest(AddBookingRequest request)
@@ -88,7 +90,7 @@ namespace PDR.PatientBooking.Service.BookingService.Validation
 
         private bool ValidateBookingDateTimeAvailability(AddBookingRequest request, ref PdrValidationResult result)
         {
-            var now = DateTime.UtcNow;
+            var now = _systemClock.UtcNow;
 
             if (request.EndTime <= request.StartTime)
             {
@@ -112,7 +114,8 @@ namespace PDR.PatientBooking.Service.BookingService.Validation
 
             var patientOverlappingAppointments = _context.Order.Where(o => !o.IsCancelled &&
                                                                         o.PatientId == request.PatientId &&
-                                                                        request.StartTime < o.EndTime && o.StartTime < request.EndTime).ToList();
+                                                                        request.StartTime < o.EndTime &&
+                                                                        o.StartTime < request.EndTime);
 
             if (patientOverlappingAppointments.Any())
             {
@@ -123,7 +126,8 @@ namespace PDR.PatientBooking.Service.BookingService.Validation
 
             var doctorOverLappingAppointments = _context.Order.Where(o => !o.IsCancelled &&
                                                      o.DoctorId == request.DoctorId &&
-                                                     request.StartTime < o.EndTime && o.StartTime < request.EndTime).ToList();
+                                                     request.StartTime < o.EndTime && 
+                                                     o.StartTime < request.EndTime);
             if (doctorOverLappingAppointments.Any())
             {
                 result.PassedValidation = false;

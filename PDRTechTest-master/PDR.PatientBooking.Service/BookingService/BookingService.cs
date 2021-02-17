@@ -44,7 +44,6 @@ namespace PDR.PatientBooking.Service.BookingService
 
             _context.Order.Add(new Order
             {
-                Id = request.Id,
                 DoctorId = request.DoctorId,
                 PatientId = request.PatientId,
                 StartTime = request.StartTime,
@@ -89,11 +88,16 @@ namespace PDR.PatientBooking.Service.BookingService
                 query = query.Where(x => x.StartTime > DateTime.UtcNow);
             }
 
-            var bookings = await query.AsNoTracking().Select(o => MapFrom(o)).ToListAsync(cancellationToken);
+            var bookings = await query
+                .Include(o => o.Doctor)
+                .Include(o => o.Patient)
+                .Include(o => o.Patient.Clinic)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
 
-            return new GetAllBookingsResponse()
+            return new GetAllBookingsResponse
             {
-                Bookings = bookings
+                Bookings = bookings.Select(MapFrom).ToList()
             };
         }
 
@@ -112,7 +116,7 @@ namespace PDR.PatientBooking.Service.BookingService
         }
 
         //TODO add auto-mapper instead
-        private GetAllBookingsResponse.Order MapFrom(Order booking)
+        private static GetAllBookingsResponse.Order MapFrom(Order booking)
         {
             return new GetAllBookingsResponse.Order
             {
@@ -121,7 +125,7 @@ namespace PDR.PatientBooking.Service.BookingService
                 IsCancelled = booking.IsCancelled,
                 Id = booking.Id,
                 SurgeryType = booking.Patient.Clinic.SurgeryType,
-                Patient = new GetAllPatientsResponse.Patient
+                Patient = booking.Patient != null ? new GetAllPatientsResponse.Patient
                 {
                     Id = booking.Patient.Id,
                     FirstName = booking.Patient.FirstName,
@@ -134,7 +138,7 @@ namespace PDR.PatientBooking.Service.BookingService
                         Id = booking.Patient.ClinicId,
                         Name = booking.Patient.Clinic.Name
                     }
-                },
+                } : null,
                 Doctor = new GetAllDoctorsResponse.Doctor
                 {
                     Id = booking.Doctor.Id,

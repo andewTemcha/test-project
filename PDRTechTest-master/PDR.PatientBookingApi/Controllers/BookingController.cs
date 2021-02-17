@@ -1,17 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using PDR.PatientBooking.Data;
-using PDR.PatientBooking.Data.Models;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using PDR.PatientBooking.Service.BookingService;
 using PDR.PatientBooking.Service.BookingService.Requests;
 using PDR.PatientBooking.Service.BookingService.Responses;
-using PDR.PatientBooking.Service.BookingService.Validation;
 
 namespace PDR.PatientBookingApi.Controllers
 {
@@ -68,20 +63,28 @@ namespace PDR.PatientBookingApi.Controllers
         [ProducesResponseType(StatusCodes.Status201Created)]
         public async Task<IActionResult> AddBooking(NewBooking newBooking, CancellationToken token)
         {
-            var bookingId = Guid.NewGuid();
-
-            var bookingAddRequest = new AddBookingRequest()
+            try
             {
-                Id = bookingId,
-                StartTime = newBooking.StartTime,
-                EndTime = newBooking.EndTime,
-                PatientId = newBooking.PatientId,
-                DoctorId = newBooking.DoctorId
-            };
+                var bookingAddRequest = new AddBookingRequest()
+                {
+                    StartTime = newBooking.StartTime,
+                    EndTime = newBooking.EndTime,
+                    PatientId = newBooking.PatientId,
+                    DoctorId = newBooking.DoctorId
+                };
 
-            await _bookingService.AddBooking(bookingAddRequest, token);
+                await _bookingService.AddBooking(bookingAddRequest, token);
 
-            return CreatedAtAction(nameof(GetBooking),  new {id = bookingId}, bookingAddRequest);
+                return Ok();
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex);
+            }
         }
 
 
